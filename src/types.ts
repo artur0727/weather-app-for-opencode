@@ -34,6 +34,20 @@ export interface WeatherInfo {
   windSpeed: number;
 }
 
+/** Un día del pronóstico extendido. */
+export interface ForecastDay {
+  /** Fecha "YYYY-MM-DD" tal como la devuelve la API (zona horaria local de la ciudad). */
+  date: string;
+  /** Código WMO; -1 cuando la API no lo informa. */
+  weatherCode: number;
+  /** Temperatura máxima del día, en la unidad configurada. */
+  tempMax: number;
+  /** Temperatura mínima del día, en la unidad configurada. */
+  tempMin: number;
+  /** Probabilidad máxima de precipitación en %, o null cuando la API no la informa. */
+  precipitationProbability: number | null;
+}
+
 /** Resultado crudo del servicio de geocoding, antes de convertirse en City. */
 export interface GeoResult {
   name: string;

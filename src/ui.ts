@@ -1,4 +1,5 @@
-import type { City, Unit, WeatherInfo } from "./types.ts";
+import type { City, ForecastDay, Unit, WeatherInfo } from "./types.ts";
+import { cyanBold, dim, yellow } from "./colors.ts";
 
 /** Lanzada cuando el usuario cancela un prompt; se tolera volver al menú sin error. */
 export class Cancelado extends Error {
@@ -11,9 +12,11 @@ export class Cancelado extends Error {
 /** Banner literal del mockup del README. */
 export function printBanner(): void {
   console.log(
-    "════════════════════════════════════════\n" +
-      "         WEATHER CLI\n" +
-      "════════════════════════════════════════",
+    cyanBold(
+      "════════════════════════════════════════\n" +
+        "         WEATHER CLI\n" +
+        "════════════════════════════════════════",
+    ),
   );
 }
 
@@ -75,14 +78,59 @@ function formatNumber(value: number): string {
   return new Intl.NumberFormat("es", { maximumFractionDigits: 1 }).format(value);
 }
 
+const DATE_FMT = new Intl.DateTimeFormat("es", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+});
+
+function capitalizePrimera(text: string): string {
+  return text.length === 0 ? text : text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Convierte una fecha ISO "YYYY-MM-DD" en "mié 04 nov" (mediodía evita corrimientos de zona). */
+export function formatWeatherDate(iso: string): string {
+  const fecha = new Date(`${iso}T12:00:00`);
+  return Number.isNaN(fecha.getTime()) ? iso : capitalizePrimera(DATE_FMT.format(fecha));
+}
+
+/** Etiqueta de temperatura en la unidad configurada, resaltada en amarillo. */
+function formatTemp(value: number, unitTxt: string): string {
+  return yellow(`${formatNumber(value)} ${unitTxt}`);
+}
+
 /** Formatea el clima actual de una ciudad como bloque multilínea. */
 export function formatWeather(city: Omit<City, "id">, weather: WeatherInfo, unit: Unit): string {
   const unitTxt = unitLabel(unit);
   return [
-    `${cityLabel(city)}`,
-    "─".repeat(40),
+    cyanBold(cityLabel(city)),
+    dim("─".repeat(40)),
     `${weatherEmoji(weather.weatherCode)} ${weatherDescription(weather.weatherCode)}`,
-    `🌡️ Temperatura: ${formatNumber(weather.temperature)} ${unitTxt} (sensación ${formatNumber(weather.apparentTemperature)} ${unitTxt})`,
-    `💨 Viento: ${formatNumber(weather.windSpeed)} km/h`,
+    `🌡️ Temperatura: ${formatTemp(weather.temperature, unitTxt)} (sensación ${formatTemp(
+      weather.apparentTemperature,
+      unitTxt,
+    )})`,
+    `💨 Viento: ${dim(`${formatNumber(weather.windSpeed)} km/h`)}`,
   ].join("\n");
+}
+
+/** Formatea el pronóstico extendido (7 días) de una ciudad como bloque multilínea. */
+export function formatForecast(city: Omit<City, "id">, days: ForecastDay[], unit: Unit): string {
+  const unitTxt = unitLabel(unit);
+  const lines: string[] = [
+    cyanBold(cityLabel(city)),
+    dim("─".repeat(40)),
+    `${days.length === 1 ? "Pronóstico 1 día" : "Pronóstico 7 días"} · ${unitTxt}`,
+  ];
+  for (const day of days) {
+    const fecha = formatWeatherDate(day.date).padEnd(11);
+    const condicion = `${weatherEmoji(day.weatherCode)} ${weatherDescription(day.weatherCode)}`;
+    const temps = `${formatNumber(day.tempMax)}° / ${formatNumber(day.tempMin)}°`;
+    const lluvia =
+      day.precipitationProbability === null
+        ? ""
+        : `  ${dim(`💧 ${formatNumber(day.precipitationProbability)}%`)}`;
+    lines.push(`${fecha}${condicion}  ${yellow(temps)} ${dim(unitTxt)}${lluvia}`);
+  }
+  return lines.join("\n");
 }
