@@ -4,12 +4,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "typecheck": "bun check"
+    "typecheck": "bun check",
+    "build": "bun build --compile --outfile weather-cli index.ts",
+    "dev": "bun --watch index.ts",
+    "start": "bun run index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^7"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1"
   }
 }
