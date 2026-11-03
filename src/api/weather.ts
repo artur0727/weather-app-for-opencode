@@ -1,39 +1,8 @@
-import type { City, ForecastDay, GeoResult, Unit, WeatherInfo } from "./types.ts";
-
-const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
-const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
-const TIMEOUT_MS = 10_000;
-
-/** Error de la capa de red/API con mensaje listo para mostrar al usuario. */
-export class ApiError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
-
-async function fetchJson<T>(url: URL): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.name === "TimeoutError" || error.name === "AbortError")
-    ) {
-      throw new ApiError("La consulta tardó demasiado. Verifica tu conexión a internet.");
-    }
-    throw new ApiError("Error de red. Verifica tu conexión a internet.");
-  }
-  if (!response.ok) {
-    throw new ApiError(`El servicio de Open-Meteo respondió con error (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as T;
-}
-
-interface GeocodingResponse {
-  results?: GeoResult[];
-}
+import type { City } from "../types/City.ts";
+import type { Unit } from "../types/Unit.ts";
+import type { ForecastDay, WeatherInfo } from "../types/Weather.ts";
+import { FORECAST_DAYS, FORECAST_URL } from "../utils/constants.ts";
+import { ApiError, fetchJson } from "./client.ts";
 
 interface ForecastResponse {
   current?: {
@@ -61,17 +30,6 @@ function forecastUrl(city: City, unit: Unit): URL {
   return url;
 }
 
-/** Busca ciudades por nombre en el servicio de geocoding. */
-export async function searchCity(query: string): Promise<GeoResult[]> {
-  const url = new URL(GEO_URL);
-  url.searchParams.set("name", query.trim());
-  url.searchParams.set("count", "5");
-  url.searchParams.set("language", "es");
-  url.searchParams.set("format", "json");
-  const data = await fetchJson<GeocodingResponse>(url);
-  return data.results ?? [];
-}
-
 /** Consulta el clima actual de una ciudad, en la unidad indicada. */
 export async function getCurrentWeather(city: City, unit: Unit): Promise<WeatherInfo> {
   const url = forecastUrl(city, unit);
@@ -90,7 +48,11 @@ export async function getCurrentWeather(city: City, unit: Unit): Promise<Weather
 }
 
 /** Consulta el pronóstico extendido para los próximos `days` días (default 7). */
-export async function getDailyForecast(city: City, unit: Unit, days = 7): Promise<ForecastDay[]> {
+export async function getDailyForecast(
+  city: City,
+  unit: Unit,
+  days = FORECAST_DAYS,
+): Promise<ForecastDay[]> {
   const url = forecastUrl(city, unit);
   url.searchParams.set(
     "daily",
@@ -108,7 +70,7 @@ export async function getDailyForecast(city: City, unit: Unit, days = 7): Promis
     throw new ApiError(`No se pudo obtener el pronóstico de ${city.name}.`);
   }
   // Solo días con datos completos; la API no suele recortar, pero evita columnas desalineadas.
-  const dias = daily.time
+  const forecast = daily.time
     .map((date, i) => {
       const tempMax = daily.temperature_2m_max?.[i];
       const tempMin = daily.temperature_2m_min?.[i];
@@ -122,8 +84,8 @@ export async function getDailyForecast(city: City, unit: Unit, days = 7): Promis
       };
     })
     .filter((day): day is ForecastDay => day !== null);
-  if (dias.length === 0) {
+  if (forecast.length === 0) {
     throw new ApiError(`No se pudo obtener el pronóstico de ${city.name}.`);
   }
-  return dias;
+  return forecast;
 }

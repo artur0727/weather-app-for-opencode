@@ -48,6 +48,7 @@ bun init
   4. Eliminar ciudad
   5. Establecer ciudad default
   6. Pronóstico 7 días
+  7. Listar ciudades guardadas
   8. Ajustes (°C)
   9. Salir
 ════════════════════════════════════════

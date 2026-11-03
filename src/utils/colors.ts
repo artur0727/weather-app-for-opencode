@@ -3,7 +3,7 @@ import { styleText } from "node:util";
 /**
  * Paleta de la app sobre `node:util` `styleText` (la misma base que usa @clack/prompts).
  * En un TTY envuelve el texto con códigos ANSI; sin TTY (o con `NO_COLOR`) lo devuelve tal cual,
- * así que los formatters puros de `ui.ts` son estables para tests.
+ * así que los formatters puros de `format.ts` son estables para tests.
  *
  * Convención: cyan = menú/banner, amarillo = temperaturas, verde = éxito,
  * rojo = error, dim = texto secundario.
