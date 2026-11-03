@@ -8,12 +8,13 @@ Weather CLI app (Bun + TypeScript): interactive console app to look up current w
 - Run: `bun run src/index.ts` (interactive; needs a real TTY — `@clack/prompts` prompts hang or misrender when piped)
 - Non-interactive flags: `bun run src/index.ts --help` / `--version` / `--config-path` (also `--version` on the compiled binary; unknown flags exit 1)
 - Typecheck: `bun run typecheck` → runs `bun check`. TypeScript is strict (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`: use `import type` for type-only imports; imports keep `.ts` extensions).
-- Build executable: `bun run build` → `weather-cli.exe` via `bun build --compile` from `src/index.ts` (version comes from `package.json`, imported at build time).
-- No test setup yet; the intended second pass is `bun test` with `fetch` mocked, testing `storage`/`format`/`api` pure logic (safe: `src/index.ts` runs its TTY loop only under `import.meta.main`).
+- Build executable: `bun run build` → runs `bun test` + `bun run typecheck`, then `weather-cli.exe` via `bun build --compile` from `src/index.ts` (version comes from `package.json`, imported at build time). If a test or the typecheck fails, nothing is compiled.
+- Tests: `bun test` (suite in `tests/`, preload `tests/setup.ts` via `bunfig.toml`); also `bun run test:watch` and `bun run test:coverage`. `fetch` is always mocked: tests never hit the network or write to the real `~/.weather-cli/config.json` (storage tests use temp dirs through the optional `path` argument of `loadConfig`/`saveConfig`).
 
 ## Structure
 
 - `src/index.ts` — bootstrap only: CLI flags, banner/header, clack menu loop, dispatch to actions, central error handling. Guarded by `import.meta.main` so importing it has no side effects.
+- `tests/` — `bun test` suite: shared helpers (`fixtures.ts`, `api.ts`), plus `storage/`, `api/`, `utils/format` and `presentation/menu` tests. No TTY or network dependencies; `NO_COLOR` is set in `tests/setup.ts`.
 - `src/actions/` — one module per menu option; all interactive prompts and side effects (config saves) live here:
   - `getWeather.ts` — options 1 (default city) and 2 (all cities, in parallel).
   - `addCity.ts`, `removeCity.ts`, `setDefaultCity.ts`, `listCities.ts` — city management (options 3-5 and 7).

@@ -62,3 +62,15 @@ weather-cli --help
 weather-cli --version
 weather-cli --config-path   # muestra ~/.weather-cli/config.json
 ```
+
+### Testing
+
+La suite usa `bun test` y vive en `tests/` (sin TTY ni llamadas reales a la API).
+
+```bash
+bun test              # ejecuta toda la suite
+bun run test:watch    # modo watch
+bun run test:coverage # reporte de cobertura
+```
+
+`bun run build` ejecuta primero los tests y el typecheck: si algo falla, no se genera el ejecutable.

@@ -35,9 +35,9 @@ function normalize(raw: unknown): Config {
 }
 
 /** Carga el config desde disco; si no existe o está corrupto, usa el default. */
-export async function loadConfig(): Promise<Config> {
+export async function loadConfig(path: string = configPath): Promise<Config> {
   try {
-    const raw = await Bun.file(configPath).json();
+    const raw = await Bun.file(path).json();
     return normalize(raw);
   } catch {
     return defaultConfig;
@@ -45,9 +45,9 @@ export async function loadConfig(): Promise<Config> {
 }
 
 /** Guarda el config creando la carpeta si hace falta. */
-export async function saveConfig(config: Config): Promise<void> {
-  await mkdir(dirname(configPath), { recursive: true });
-  await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);
+export async function saveConfig(config: Config, path: string = configPath): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await Bun.write(path, `${JSON.stringify(config, null, 2)}\n`);
 }
 
 /** Devuelve un config nuevo con la unidad de temperatura indicada. */
