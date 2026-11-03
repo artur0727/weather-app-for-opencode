@@ -1,7 +1,21 @@
-import { describe, expect, it } from "bun:test";
-import { menuActions, menuOptions } from "../../src/presentation/menu.ts";
+import { beforeEach, describe, expect, it } from "bun:test";
+import {
+  menuActions,
+  menuOptions,
+  selectMenuOption,
+} from "../../src/presentation/menu.ts";
 import { MENU_EXIT_VALUE } from "../../src/utils/constants.ts";
+import {
+  CANCEL,
+  queueSelect,
+  resetClack,
+  selectPrompts,
+} from "../helpers/clack.ts";
 import { makeCity, makeConfig } from "../helpers/fixtures.ts";
+
+beforeEach(() => {
+  resetClack();
+});
 
 describe("menuOptions", () => {
   const options = menuOptions(makeConfig({ unit: "fahrenheit", cities: [makeCity()] }));
@@ -56,5 +70,33 @@ describe("menuActions", () => {
   it("no mapea la opción de salir", () => {
     expect(MENU_EXIT_VALUE).toBe("9");
     expect(menuActions[MENU_EXIT_VALUE]).toBeUndefined();
+  });
+});
+
+describe("selectMenuOption", () => {
+  it("devuelve la opción elegida y ofrece las 9 opciones del config actual", async () => {
+    queueSelect("3");
+
+    const config = makeConfig({ cities: [makeCity()], defaultCityId: "ottawa" });
+    const selection = await selectMenuOption(config);
+
+    expect(selection).toBe("3");
+    expect(selectPrompts[0]?.message).toBe("Selecciona una opción");
+    expect(selectPrompts[0]?.options).toHaveLength(9);
+    expect(selectPrompts[0]?.options[1]?.label).toBe(
+      "2. Clima de todas las ciudades (1)",
+    );
+  });
+
+  it("devuelve null cuando se elige salir", async () => {
+    queueSelect(MENU_EXIT_VALUE);
+
+    await expect(selectMenuOption(makeConfig())).resolves.toBeNull();
+  });
+
+  it("devuelve null cuando se cancela el menú", async () => {
+    queueSelect(CANCEL);
+
+    await expect(selectMenuOption(makeConfig())).resolves.toBeNull();
   });
 });

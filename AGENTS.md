@@ -14,7 +14,7 @@ Weather CLI app (Bun + TypeScript): interactive console app to look up current w
 ## Structure
 
 - `src/index.ts` — bootstrap only: CLI flags, banner/header, clack menu loop, dispatch to actions, central error handling. Guarded by `import.meta.main` so importing it has no side effects.
-- `tests/` — `bun test` suite: shared helpers (`fixtures.ts`, `api.ts`), plus `storage/`, `api/`, `utils/format` and `presentation/menu` tests. No TTY or network dependencies; `NO_COLOR` is set in `tests/setup.ts`.
+- `tests/` — `bun test` suite espejo de `src/`: un `*.test.ts` por módulo (`index`, `actions/`, `api/`, `presentation/`, `storage/`, `types/`, `utils/`), más `helpers/` (`fixtures.ts`, `api.ts`, `clack.ts`, `actions.ts`). No TTY ni red: `fetch` se stubbea, `@clack/prompts` se mockea desde el preload y `tests/setup.ts` fija `NO_COLOR` y un home temporal para no tocar la config real.
 - `src/actions/` — one module per menu option; all interactive prompts and side effects (config saves) live here:
   - `getWeather.ts` — options 1 (default city) and 2 (all cities, in parallel).
   - `addCity.ts`, `removeCity.ts`, `setDefaultCity.ts`, `listCities.ts` — city management (options 3-5 and 7).

@@ -65,7 +65,7 @@ weather-cli --config-path   # muestra ~/.weather-cli/config.json
 
 ### Testing
 
-La suite usa `bun test` y vive en `tests/` (sin TTY ni llamadas reales a la API).
+La suite usa `bun test`, vive en `tests/` y espeja la estructura de `src/` (sin TTY ni llamadas reales a la API; `@clack/prompts` se mockea).
 
 ```bash
 bun test              # ejecuta toda la suite
