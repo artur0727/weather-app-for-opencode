@@ -74,3 +74,16 @@ bun run test:coverage # reporte de cobertura
 ```
 
 `bun run build` ejecuta primero los tests y el typecheck: si algo falla, no se genera el ejecutable.
+
+### Releases
+
+El workflow `.github/workflows/release.yml` publica un release automáticamente al hacer push a `main` (también se puede lanzar a mano desde la pestaña **Actions**):
+
+1. Lee la `version` de `package.json` y calcula el tag `vX.Y.Z`.
+2. Si el tag ya existe, el run termina sin publicar nada.
+3. Si es nuevo, compila el binario en Linux, macOS (ARM64 e Intel) y Windows con `bun run build`.
+4. Crea el tag y el release con los cuatro binarios adjuntos y notas autogeneradas.
+
+Los assets se publican como `weather-cli-linux-x64`, `weather-cli-macos-arm64`, `weather-cli-macos-x64` y `weather-cli-windows-x64.exe`. En Linux y macOS hay que dar permisos de ejecución tras descargarlos (`chmod +x weather-cli-*`).
+
+Para publicar una versión nueva, sube la `version` en `package.json`, haz commit y mergea a `main`.

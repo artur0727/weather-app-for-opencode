@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Leer versión y comprobar tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Leer versión de package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Comprobar si el tag ya existe
+        id: check
+        run: |
+          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "La versión ${{ steps.version.outputs.version }} ya está publicada; no se hace nada."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: prepare
+    if: needs.prepare.outputs.exists == 'false'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-15-intel, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Tests, typecheck y binario
+        run: bun run build
+
+      - name: Renombrar binario con OS y arquitectura
+        shell: bash
+        run: |
+          OS=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+          ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          if [ "$OS" = "windows" ]; then
+            mv weather-cli.exe "weather-cli-windows-$ARCH.exe"
+          else
+            mv weather-cli "weather-cli-$OS-$ARCH"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: weather-cli-${{ runner.os }}-${{ runner.arch }}
+          path: weather-cli-*
+          if-no-files-found: error
+
+  release:
+    name: Crear tag y release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: weather-cli-*
+          merge-multiple: true
+
+      - name: Crear tag y release con los binarios
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          ARGS=()
+          case "$VERSION" in *-*) ARGS+=(--prerelease) ;; esac
+          gh release create "$TAG" ./weather-cli-* \
+            --title "$TAG" \
+            --generate-notes \
+            --target "$GITHUB_SHA" \
+            "${ARGS[@]}"
